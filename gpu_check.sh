@@ -1,18 +1,24 @@
 #!/bin/bash
+# gpu_check.sh - simple GPU health check
+
 # check that the GPU is detected
 if ! nvidia-smi > /dev/null 2>&1; then
     echo "RESULT: FAIL - GPU not detected"
     exit 1
 fi
-# gpu_check.sh - simple GPU health check
+
+# get GPU data
 DATA=$(nvidia-smi --query-gpu=name,temperature.gpu,power.draw,memory.used,memory.total --format=csv,noheader,nounits | sed 's/, /,/g')
 IFS=',' read -r NAME TEMP POWER MEM_USED MEM_TOTAL <<< "$DATA"
-echo "=========== GPU HEALTH CHECK =========="
+
+# print report
+echo "========== GPU HEALTH CHECK =========="
 echo "GPU: $NAME"
 echo "Temperature: $TEMP C"
 echo "Power draw: $POWER W"
 echo "Memory used: $MEM_USED / $MEM_TOTAL MiB"
-echo "======================================================="
+echo "======================================"
+
 # limits
 TEMP_LIMIT=85
 EXPECTED_MEM=4096
@@ -35,8 +41,9 @@ else
 fi
 
 echo "RESULT: $RESULT"
-# save result to log file
-LOG_FILE="$HOME/projects/gpu-health-check/gpu_log.csv"
+
+# save result to log file (saved next to this script)
+LOG_FILE="$(dirname "$0")/gpu_log.csv"
 
 if [ ! -f "$LOG_FILE" ]; then
     echo "timestamp,gpu,temp_c,power_w,mem_total_mib,result" > "$LOG_FILE"
@@ -44,3 +51,8 @@ fi
 
 echo "$(date '+%Y-%m-%d %H:%M:%S'),$NAME,$TEMP,$POWER,$MEM_TOTAL,$RESULT" >> "$LOG_FILE"
 echo "Saved to $LOG_FILE"
+
+# exit code: 0 = pass, 1 = fail
+if [ "$RESULT" = "FAIL" ]; then
+    exit 1
+fi
